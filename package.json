@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "typecheck": "vue-tsc --noEmit",
+    "verify:wind": "esbuild scripts/verify-wind.ts --bundle --format=esm --platform=node --outfile=node_modules/.cache/verify-wind.mjs && node node_modules/.cache/verify-wind.mjs",
     "build": "vite build",
     "preview": "vite preview"
   },

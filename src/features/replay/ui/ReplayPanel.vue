@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AlertTriangle, CheckCircle2, CircleStop, FastForward, Pause, Play, RotateCcw, SkipBack } from '@lucide/vue'
+import { AlertTriangle, CheckCircle2, CircleStop, FastForward, Hand, Pause, Play, RotateCcw, SkipBack, Vibrate, Wind } from '@lucide/vue'
 import type { SimulationEvent, SimulationRun } from '@/shared/document'
 import { formatSeconds } from '@/shared/time'
 
@@ -8,8 +8,13 @@ defineProps<{
   currentEvent: SimulationEvent | null; stale: boolean
 }>()
 const emit = defineEmits<{ toggle: []; seek: [number]; restart: []; event: [string] }>()
-const iconFor = (kind: SimulationEvent['kind']) => kind === 'interrupted' ? AlertTriangle
-  : kind === 'mechanism' ? FastForward : CheckCircle2
+const iconFor = (kind: SimulationEvent['kind'], event?: SimulationEvent) => {
+  if (kind === 'interrupted') return AlertTriangle
+  if (kind === 'contact') return Hand
+  if (kind === 'force') return event?.detail.includes('震动') ? Vibrate : Wind
+  if (kind === 'mechanism') return FastForward
+  return CheckCircle2
+}
 </script>
 
 <template>
@@ -20,9 +25,15 @@ const iconFor = (kind: SimulationEvent['kind']) => kind === 'interrupted' ? Aler
     </div>
     <template v-if="run">
       <div class="replay-summary" :class="run.status">
-        <div class="summary-symbol"><CircleStop v-if="run.status === 'interrupted'" :size="17" /><CheckCircle2 v-else :size="17" /></div>
-        <div><strong>{{ run.status === 'interrupted' ? '找到中断点' : run.status === 'complete' ? '连锁已完成' : '场景暂无元件' }}</strong>
-          <small>{{ run.interruptionReason ?? '所有触发事件均已记录' }}</small></div>
+        <div class="summary-symbol">
+          <CircleStop v-if="run.status === 'interrupted'" :size="17" />
+          <Wind v-else-if="run.status === 'stable'" :size="17" />
+          <CheckCircle2 v-else :size="17" />
+        </div>
+        <div>
+          <strong>{{ run.status === 'interrupted' ? '找到中断点' : run.status === 'complete' ? '连锁已完成' : run.status === 'stable' ? '力场已稳定' : '场景暂无元件' }}</strong>
+          <small>{{ run.interruptionReason ?? (run.status === 'stable' ? '逆风抵消或震动不足，没有元件越过倒下门槛。' : '所有触发事件均已记录') }}</small>
+        </div>
       </div>
       <div class="replay-controls">
         <button class="replay-icon" aria-label="回到开头" @click="emit('restart')"><SkipBack :size="15" /></button>
@@ -34,14 +45,14 @@ const iconFor = (kind: SimulationEvent['kind']) => kind === 'interrupted' ? Aler
           @input="emit('seek', Number(($event.target as HTMLInputElement).value))" />
         <span class="replay-clock mono">{{ formatSeconds(run.duration) }}</span>
       </div>
-      <div class="event-list-heading"><span>事件轨迹</span><span>{{ events.length }} EVENTS</span></div>
+      <div class="event-list-heading"><span>事件轨迹</span><span>{{ events.length }} EVENTS · {{ run.contacts?.length ?? 0 }} CONTACTS</span></div>
       <ol class="event-list">
         <li v-for="event in events" :key="event.id">
           <button class="event-row" :class="{ current: currentEvent?.id === event.id, interrupted: event.kind === 'interrupted' }"
             :aria-current="currentEvent?.id === event.id ? 'step' : undefined" @click="emit('event', event.id)">
             <span class="event-time mono">{{ formatSeconds(event.time) }}</span>
-            <span class="event-icon"><component :is="iconFor(event.kind)" :size="14" /></span>
-            <span class="event-copy"><strong>{{ run.events.find(item => item.id === event.id)?.pieceId === run.startPieceId ? '启动点' : event.detail.split(' · ')[0] }}</strong><small>{{ event.detail.split(' · ')[1] ?? event.pieceId }}</small></span>
+            <span class="event-icon"><component :is="iconFor(event.kind, event)" :size="14" /></span>
+            <span class="event-copy"><strong>{{ run.startPieceId && run.events.find(item => item.id === event.id)?.pieceId === run.startPieceId ? '启动点' : event.detail.split(' · ')[0] }}</strong><small>{{ event.detail.split(' · ')[1] ?? (event.pieceId || event.zoneId || '') }}</small></span>
             <span v-if="event.kind === 'interrupted'" class="event-flag">中断</span>
           </button>
         </li>

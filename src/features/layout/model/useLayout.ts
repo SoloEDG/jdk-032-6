@@ -4,7 +4,7 @@ import { roundedPosition } from '../lib/geometry'
 import { stableId } from '@/shared/time'
 
 const names: Record<PieceKind, string> = {
-  domino: '骨牌', ramp: '坡道', splitter: '分岔', trigger: '触发器',
+  domino: '骨牌', ramp: '坡道', splitter: '分岔', trigger: '触发器', pendulum: '摆锤',
 }
 
 export function useLayout(document: Ref<DominoDocument>, changed: () => void) {
@@ -20,8 +20,8 @@ export function useLayout(document: Ref<DominoDocument>, changed: () => void) {
     const position = roundedPosition({ x, y })
     const piece: Piece = {
       id, kind, ...position, angle: 0, facing: 'east',
-      label: names[kind], width: kind === 'ramp' ? 1.7 : kind === 'splitter' ? 0.72 : 0.42,
-      height: kind === 'ramp' ? 0.48 : kind === 'trigger' ? 0.8 : 1.6,
+      label: names[kind], width: kind === 'ramp' ? 1.7 : kind === 'splitter' ? 0.72 : kind === 'pendulum' ? 0.28 : 0.42,
+      height: kind === 'ramp' ? 0.48 : kind === 'trigger' ? 0.8 : kind === 'pendulum' ? 1.35 : 1.6,
       fallThreshold: 0.8, friction: 0.55,
     }
     document.value = { ...document.value, pieces: [...document.value.pieces, piece] }

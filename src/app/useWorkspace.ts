@@ -4,8 +4,10 @@ import { createDefaultDocument } from '@/shared/defaults'
 import { useLayout } from '@/features/layout'
 import { useMechanisms } from '@/features/mechanisms'
 import { useScene, clampToScene } from '@/features/scene'
-import { useSimulation } from '@/features/simulation'
+import { useSimulation, runWindSelfCheck, type SelfCheckReport } from '@/features/simulation'
 import { useReview } from '@/features/replay'
+import { useForceZones } from '@/features/forces'
+import { createVerificationDocument } from '@/shared/verification'
 
 const storageKey = 'chainline-jdk032-project-v1'
 
@@ -15,7 +17,7 @@ function loadProject() {
     if (!saved) return createDefaultDocument()
     const parsed = JSON.parse(saved) as DominoDocument
     if (!Array.isArray(parsed.pieces) || !Array.isArray(parsed.connections) || !parsed.scene) return createDefaultDocument()
-    return parsed
+    return { ...parsed, forceZones: Array.isArray(parsed.forceZones) ? parsed.forceZones : [] }
   } catch {
     return createDefaultDocument()
   }
@@ -25,6 +27,7 @@ export function useWorkspace() {
   const document = shallowRef<DominoDocument>(loadProject())
   const saveState = ref<'saved' | 'saving' | 'unsaved'>('saved')
   const focusPieceId = ref<string | null>(null)
+  const selfCheckReport = ref<SelfCheckReport | null>(null)
   let saveTimer = 0
 
   function changed() {
@@ -39,6 +42,7 @@ export function useWorkspace() {
   const layout = useLayout(document, changed)
   const mechanisms = useMechanisms(document, changed)
   const scene = useScene(document, changed)
+  const forces = useForceZones(document, changed)
   const simulation = useSimulation(document)
   const review = useReview(simulation.run)
 
@@ -69,9 +73,25 @@ export function useWorkspace() {
   function focusEvent(id: string) {
     const event = simulation.run.value?.events.find(item => item.id === id)
     if (!event) return
-    focusPieceId.value = event.pieceId
-    layout.select(event.pieceId)
+    focusPieceId.value = event.pieceId || null
+    if (event.pieceId) layout.select(event.pieceId)
     review.focusEvent(id)
+  }
+
+  function loadVerificationTheatre() {
+    const next = createVerificationDocument()
+    document.value = next
+    changed()
+    layout.select(null)
+    forces.selectZone(null)
+    simulation.clear()
+    review.stop()
+  }
+
+  async function verifyWindTheatre() {
+    selfCheckReport.value = runWindSelfCheck()
+    loadVerificationTheatre()
+    await simulation.simulate()
   }
   function onKeydown(event: KeyboardEvent) {
     const target = event.target
@@ -81,7 +101,9 @@ export function useWorkspace() {
       review.toggle()
     } else if (event.key === 'Escape') {
       layout.chooseTool(null)
+      forces.cancelDraft()
       layout.select(null)
+      forces.selectZone(null)
       focusPieceId.value = null
     } else {
       layout.handleKey(event)
@@ -93,5 +115,8 @@ export function useWorkspace() {
     window.clearTimeout(saveTimer)
   })
 
-  return { document, saveState, focusPieceId, layout, mechanisms, scene, simulation, review, place, move, focusEvent }
+  return {
+    document, saveState, focusPieceId, selfCheckReport, layout, mechanisms, scene, forces,
+    simulation, review, place, move, focusEvent, loadVerificationTheatre, verifyWindTheatre,
+  }
 }

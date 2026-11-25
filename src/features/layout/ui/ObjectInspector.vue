@@ -19,7 +19,11 @@ function number(event: Event) { return Number(value(event)) }
         <label class="field-label">横坐标<input type="number" :value="piece.x.toFixed(1)" step="0.1" readonly /></label>
         <label class="field-label">纵坐标<input type="number" :value="piece.y.toFixed(1)" step="0.1" readonly /></label>
       </div>
-      <label class="field-label">倾倒门槛 <span>{{ piece.fallThreshold.toFixed(1) }}</span>
+      <label v-if="piece.kind === 'pendulum'" class="field-label">摆长 <span>{{ piece.height.toFixed(1) }} m</span>
+        <input type="range" min="0.6" max="3" step="0.1" :value="piece.height"
+          @change="emit('update', piece.id, { height: number($event) })" />
+      </label>
+      <label v-else class="field-label">倾倒门槛 <span>{{ piece.fallThreshold.toFixed(1) }}</span>
         <input type="range" min="0.3" max="1.6" step="0.1" :value="piece.fallThreshold"
           @change="emit('update', piece.id, { fallThreshold: number($event) })" />
       </label>

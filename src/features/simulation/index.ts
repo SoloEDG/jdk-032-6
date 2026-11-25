@@ -1,3 +1,5 @@
 export { useSimulation } from './model/useSimulation'
 export { default as SimulationBar } from './ui/SimulationBar.vue'
 export { propagate } from './lib/propagate'
+export { runWindSelfCheck } from './lib/selfCheck'
+export type { SelfCheckReport, CheckResult } from './lib/selfCheck'

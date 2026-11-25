@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { ForceZoneKind, PieceKind } from '@/shared/document'
 import { AudioWaveform, ChevronDown, Cloud, Dot } from '@lucide/vue'
 import { PiecePalette, BuildCanvas, ObjectInspector } from '@/features/layout'
+import { ForceZonePanel } from '@/features/forces'
 import { MechanismPanel } from '@/features/mechanisms'
 import { ScenePanel } from '@/features/scene'
 import { SimulationBar } from '@/features/simulation'
@@ -9,7 +11,8 @@ import { ReplayPanel } from '@/features/replay'
 import { useWorkspace } from './useWorkspace'
 
 const {
-  document, saveState, focusPieceId, layout, mechanisms, scene, simulation, review, place, move, focusEvent,
+  document, saveState, focusPieceId, selfCheckReport, layout, mechanisms, scene, forces,
+  simulation, review, place, move, focusEvent, verifyWindTheatre,
 } = useWorkspace()
 const saveLabel = computed(() => saveState.value === 'saved' ? '已保存' : saveState.value === 'saving' ? '保存中' : '尚未保存')
 </script>
@@ -29,7 +32,16 @@ const saveLabel = computed(() => saveState.value === 'saved' ? '已保存' : sav
 
     <main id="workspace" class="workspace-grid">
       <aside class="left-rail">
-        <PiecePalette :active="layout.activeTool.value" @choose="layout.chooseTool" />
+        <PiecePalette :active="layout.activeTool.value"
+          @choose="(kind: PieceKind | null) => { forces.chooseDrawTool(null); layout.chooseTool(kind) }" />
+        <div class="rail-divider"></div>
+        <ForceZonePanel :zones="document.forceZones" :selected-id="forces.selectedZoneId.value"
+          :draw-tool="forces.drawTool.value" :report="selfCheckReport"
+          @choose-draw="(kind: ForceZoneKind | null) => { layout.chooseTool(null); forces.chooseDrawTool(kind) }"
+          @select="forces.selectZone"
+          @add="(kind: ForceZoneKind) => { layout.chooseTool(null); forces.addZone(kind) }"
+          @remove="forces.removeZone" @update="forces.updateZone"
+          @verify="verifyWindTheatre" />
         <div class="rail-divider"></div>
         <MechanismPanel :document="document" :from-id="mechanisms.fromId.value" :to-id="mechanisms.toId.value"
           :message="mechanisms.message.value" @update:from-id="mechanisms.fromId.value = $event"
@@ -44,8 +56,12 @@ const saveLabel = computed(() => saveState.value === 'saved' ? '已保存' : sav
           <div class="revision-chip"><Dot :size="19" />修订 {{ document.revision.toString().padStart(2, '0') }}</div>
         </div>
         <BuildCanvas :document="document" :active-tool="layout.activeTool.value" :selected-id="layout.selectedId.value"
-          :run="simulation.run.value" :focus-piece-id="focusPieceId" @place="place" @select="layout.select"
-          @move="move" />
+          :run="simulation.run.value" :time="review.time.value" :focus-piece-id="focusPieceId"
+          :force-tool="forces.drawTool.value" :zone-draft="forces.draft.value" :selected-zone-id="forces.selectedZoneId.value"
+          @place="place" @select="layout.select" @move="move"
+          @zone-draw-start="forces.beginDraft($event)" @zone-draw-move="forces.updateDraft($event)"
+          @zone-draw-commit="forces.commitDraft" @zone-select="forces.selectZone"
+          @zone-update="forces.updateZone" />
         <SimulationBar :run="simulation.run.value" :stale="simulation.stale.value" :busy="simulation.busy.value"
           :issue="simulation.issue.value" @run="simulation.simulate" @reset="simulation.clear" />
         <div class="center-footer">

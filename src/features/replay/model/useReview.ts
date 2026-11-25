@@ -35,7 +35,12 @@ export function useReview(run: Ref<SimulationRun | null>) {
     const event = events.value.find(item => item.id === eventId)
     if (event) seek(event.time)
   }
-  watch(run, () => { time.value = 0; stop() })
+  watch(run, nextRun => {
+    stop()
+    // Open on the frozen final pose; restart/play still begins at t = 0 and
+    // preserves every force-effective instant on the timeline.
+    time.value = nextRun?.duration ?? 0
+  })
   onBeforeUnmount(stop)
-  return { time, playing, events, currentEvent, focusPieceId, seek, play, pause, toggle, restart, focusEvent }
+  return { time, playing, events, currentEvent, focusPieceId, stop, seek, play, pause, toggle, restart, focusEvent }
 }

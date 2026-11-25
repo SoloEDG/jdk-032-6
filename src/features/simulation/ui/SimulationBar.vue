@@ -10,8 +10,8 @@ const emit = defineEmits<{ run: []; reset: [] }>()
   <section class="simulation-bar">
     <div class="simulation-status">
       <span class="status-orb" :class="run?.status ?? 'idle'"></span>
-      <div><strong>{{ stale ? '场景已更改' : run?.status === 'complete' ? '链路完成' : run?.status === 'interrupted' ? '链路中断' : '待运行' }}</strong>
-        <small>{{ stale ? '当前回放属于上一个布局版本' : run ? `${run.events.length} 个事件已记录` : '运行一次，观察倒下顺序' }}</small>
+      <div><strong>{{ stale ? '场景已更改' : run?.status === 'complete' ? '链路完成' : run?.status === 'interrupted' ? '链路中断' : run?.status === 'stable' ? '力场稳定' : '待运行' }}</strong>
+        <small>{{ stale ? '当前回放属于上一个布局版本' : run ? `${run.events.length} 个事件 · ${run.contacts?.length ?? 0} 次接触已冻结` : '运行一次，观察风场、倾倒与接触' }}</small>
       </div>
     </div>
     <p v-if="issue" class="simulation-error" role="alert">{{ issue }}</p>
